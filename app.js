@@ -7,6 +7,205 @@ const App = (() => {
 
   // ── Config ──
   const PRACTICE_Q_COUNT = 5;
+  const CUSTOM_LESSONS_KEY = 'eng_custom_lessons_v1';
+  const ENG_SYNC_KEY = 'eng_sync_config_v1';
+  const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+
+  // ── Custom Lessons ──
+  function loadCustomLessons() {
+    try { return JSON.parse(localStorage.getItem(CUSTOM_LESSONS_KEY) || '[]'); } catch { return []; }
+  }
+
+  function saveCustomLessons(lessons) {
+    localStorage.setItem(CUSTOM_LESSONS_KEY, JSON.stringify(lessons));
+  }
+
+  function getLessons() {
+    const custom = loadCustomLessons();
+    const all = [...LESSONS_DATA, ...custom];
+    return all.sort((a, b) => (a.classDate || '').localeCompare(b.classDate || ''));
+  }
+
+  function getLessonById(id) {
+    return getLessons().find(l => l.id === id) || null;
+  }
+
+  function importLesson(jsonText) {
+    let lesson;
+    try { lesson = JSON.parse(jsonText.trim()); } catch { throw new Error('JSON 格式有誤，請重新複製'); }
+    if (!lesson.id || !lesson.title) throw new Error('缺少必要欄位（id 或 title）');
+    const custom = loadCustomLessons();
+    const existing = custom.findIndex(l => l.id === lesson.id);
+    if (existing >= 0) custom[existing] = lesson;
+    else custom.push(lesson);
+    saveCustomLessons(custom);
+    pushToCloud();
+    return lesson;
+  }
+
+  function deleteCustomLesson(id) {
+    const custom = loadCustomLessons().filter(l => l.id !== id);
+    saveCustomLessons(custom);
+    pushToCloud();
+  }
+
+  // ── Sync (JSONBin) ──
+  function loadSyncConfig() {
+    try { return JSON.parse(localStorage.getItem(ENG_SYNC_KEY) || '{"apiKey":"","binId":""}'); } catch { return { apiKey: '', binId: '' }; }
+  }
+
+  function saveSyncConfig(cfg) {
+    localStorage.setItem(ENG_SYNC_KEY, JSON.stringify(cfg));
+  }
+
+  function isSyncEnabled() {
+    const cfg = loadSyncConfig();
+    return !!(cfg.apiKey && cfg.binId);
+  }
+
+  let syncStatus = 'idle';
+
+  function setSyncStatus(s) {
+    syncStatus = s;
+    const el = document.getElementById('eng-sync-dot');
+    if (!el) return;
+    el.title = s === 'ok' ? '已同步' : s === 'syncing' ? '同步中…' : s === 'error' ? '同步失敗' : '';
+    el.textContent = s === 'ok' ? '☁️' : s === 'syncing' ? '⏳' : s === 'error' ? '⚠️' : '';
+  }
+
+  function buildCloudPayload() {
+    return {
+      progress: {
+        completedLessons: state.completedLessons,
+        practiceHistory: state.practiceHistory,
+        streak: state.streak,
+        practiceCount: state.practiceCount
+      },
+      customLessons: loadCustomLessons()
+    };
+  }
+
+  async function pushToCloud() {
+    if (!isSyncEnabled()) return;
+    const cfg = loadSyncConfig();
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`${JSONBIN_BASE}/b/${cfg.binId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'X-Master-Key': cfg.apiKey },
+        body: JSON.stringify(buildCloudPayload())
+      });
+      if (!res.ok) throw new Error();
+      setSyncStatus('ok');
+    } catch { setSyncStatus('error'); }
+  }
+
+  async function pullFromCloud() {
+    if (!isSyncEnabled()) return false;
+    const cfg = loadSyncConfig();
+    setSyncStatus('syncing');
+    try {
+      const res = await fetch(`${JSONBIN_BASE}/b/${cfg.binId}/latest`, {
+        headers: { 'X-Master-Key': cfg.apiKey }
+      });
+      if (!res.ok) throw new Error();
+      const json = await res.json();
+      const data = json.record;
+      if (!data) throw new Error();
+      if (data.progress) {
+        state.completedLessons = data.progress.completedLessons || [];
+        state.practiceHistory  = data.progress.practiceHistory  || [];
+        state.streak           = data.progress.streak           || { count: 0, lastDate: '' };
+        state.practiceCount    = data.progress.practiceCount    || 0;
+        saveState();
+      }
+      if (Array.isArray(data.customLessons)) {
+        saveCustomLessons(data.customLessons);
+      }
+      setSyncStatus('ok');
+      return true;
+    } catch { setSyncStatus('error'); return false; }
+  }
+
+  async function createSyncBin(apiKey) {
+    const res = await fetch(`${JSONBIN_BASE}/b`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Master-Key': apiKey,
+        'X-Bin-Name': 'English Practice',
+        'X-Bin-Private': 'true'
+      },
+      body: JSON.stringify(buildCloudPayload())
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.message || '建立失敗，請確認 API Key');
+    }
+    const json = await res.json();
+    return json.metadata.id;
+  }
+
+  async function setupSync(apiKey, binId) {
+    if (binId) {
+      const res = await fetch(`${JSONBIN_BASE}/b/${binId}/latest`, {
+        headers: { 'X-Master-Key': apiKey }
+      });
+      if (!res.ok) throw new Error('找不到這個 Sync Code');
+      saveSyncConfig({ apiKey, binId });
+      await pullFromCloud();
+    } else {
+      const newBinId = await createSyncBin(apiKey);
+      saveSyncConfig({ apiKey, binId: newBinId });
+    }
+  }
+
+  async function handleSyncSetup() {
+    const apiKey = document.getElementById('eng-sync-api-key').value.trim();
+    const binId  = document.getElementById('eng-sync-bin-id').value.trim();
+    const btn    = document.getElementById('eng-sync-btn');
+    const msg    = document.getElementById('eng-sync-msg');
+    if (!apiKey) { msg.textContent = '請輸入 API Key'; return; }
+    btn.disabled = true; btn.textContent = '處理中…'; msg.textContent = '';
+    try {
+      await setupSync(apiKey, binId);
+      showNotifBanner('✅ 同步已啟用！');
+      renderSettings();
+    } catch(e) {
+      msg.textContent = e.message || '發生錯誤';
+      btn.disabled = false; btn.textContent = '啟用同步';
+    }
+  }
+
+  function disableSync() {
+    if (!confirm('確定要關閉同步嗎？')) return;
+    saveSyncConfig({ apiKey: '', binId: '' });
+    setSyncStatus('idle');
+    renderSettings();
+  }
+
+  async function manualSync() {
+    await pullFromCloud();
+    renderHome();
+    renderSettings();
+    showNotifBanner('同步完成');
+  }
+
+  async function handleImportLesson() {
+    const txt = document.getElementById('import-lesson-input').value.trim();
+    const msg = document.getElementById('import-lesson-msg');
+    if (!txt) { msg.textContent = '請貼上課程 JSON'; return; }
+    try {
+      const lesson = importLesson(txt);
+      msg.style.color = 'green';
+      msg.textContent = `✅ 已匯入：${lesson.title}`;
+      document.getElementById('import-lesson-input').value = '';
+      renderHome();
+    } catch(e) {
+      msg.style.color = 'red';
+      msg.textContent = e.message;
+    }
+  }
 
   // ── State ──
   let state = {
@@ -36,10 +235,10 @@ const App = (() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
-    setTimeout(() => {
+    pullFromCloud().then(() => {
       renderHome();
       showScreen('home');
-    }, 800);
+    });
   }
 
   // ── Persistence ──
@@ -59,6 +258,7 @@ const App = (() => {
     localStorage.setItem('streak',           JSON.stringify(state.streak));
     localStorage.setItem('practiceCount',    String(state.practiceCount));
     localStorage.setItem('notificationsOn',  String(state.notificationsOn));
+    pushToCloud();
   }
 
   // ── Screen navigation ──
@@ -89,7 +289,7 @@ const App = (() => {
   }
 
   function openFirstLesson() {
-    const lesson = LESSONS_DATA[0];
+    const lesson = getLessons()[0];
     if (lesson) openLessonPreview(lesson);
   }
 
@@ -171,7 +371,7 @@ const App = (() => {
     const container = $('lesson-list');
     container.innerHTML = '';
 
-    LESSONS_DATA.forEach(lesson => {
+    getLessons().forEach(lesson => {
       const isCompleted = state.completedLessons.includes(lesson.id);
       const classDate   = new Date(lesson.classDate + 'T00:00:00');
       const today       = new Date();
@@ -192,7 +392,7 @@ const App = (() => {
           </span>
         </div>
         <div class="lesson-item-actions">
-          <button class="btn-outline" onclick="App.openLessonPreview(LESSONS_DATA.find(l=>l.id==='${lesson.id}'))">
+          <button class="btn-outline" onclick="App.openLessonPreview(App.getLessonById('${lesson.id}'))">
             ${isCompleted ? '查看內容' : '預習'}
           </button>
           <button class="btn-primary" onclick="App.startLessonPractice('${lesson.id}')">
@@ -203,7 +403,7 @@ const App = (() => {
       container.appendChild(item);
     });
 
-    if (LESSONS_DATA.length === 0) {
+    if (getLessons().length === 0) {
       container.innerHTML = '<div class="text-muted text-center" style="padding:24px">還沒有課程資料</div>';
     }
   }
@@ -595,7 +795,7 @@ const App = (() => {
 
     if (mode === 'preview' || mode === 'class') {
       // 預習日或上課日：進入翻卡片預習模式
-      const next = LESSONS_DATA.find(l => !state.completedLessons.includes(l.id));
+      const next = getLessons().find(l => !state.completedLessons.includes(l.id));
       if (!next) { startReviewPractice(); return; }
       startFlashcards(next);
       return;
@@ -608,14 +808,14 @@ const App = (() => {
   }
 
   function startReviewPractice() {
-    const completed = LESSONS_DATA.filter(l => state.completedLessons.includes(l.id));
-    const source = completed.length > 0 ? completed : LESSONS_DATA;
+    const completed = getLessons().filter(l => state.completedLessons.includes(l.id));
+    const source = completed.length > 0 ? completed : getLessons();
     const pool = buildExercisePool(source);
     beginSession(pool.slice(0, PRACTICE_Q_COUNT), 'review');
   }
 
   function startLessonPractice(lessonId) {
-    const lesson = LESSONS_DATA.find(l => l.id === lessonId);
+    const lesson = getLessonById(lessonId);
     if (!lesson) return;
     const pool = buildExercisePool([lesson]);
     beginSession(pool.slice(0, PRACTICE_Q_COUNT), 'lesson', lessonId);
@@ -838,7 +1038,7 @@ const App = (() => {
 
   // ── Monthly Test ──
   function goToTest() {
-    const allLessons = LESSONS_DATA;
+    const allLessons = getLessons();
     const testContent = $('test-content');
     testContent.innerHTML = '';
 
@@ -1331,6 +1531,69 @@ const App = (() => {
     }
 
     $('completed-lessons-text').textContent = `${state.completedLessons.length} 堂`;
+
+    // Render dynamic sync + import section
+    const dynEl = $('settings-dynamic');
+    if (!dynEl) return;
+    const cfg = loadSyncConfig();
+    const synced = isSyncEnabled();
+
+    dynEl.innerHTML = `
+      <div class="settings-section mt-8">
+        <div class="section-title">☁️ 跨裝置同步</div>
+        ${synced ? `
+          <div class="settings-card" style="background:#e8f5e9;border-radius:12px;padding:14px 16px;margin-bottom:10px">
+            <div style="font-weight:700;font-size:15px;margin-bottom:4px">跨裝置同步已啟用</div>
+            <div style="font-size:13px;color:#555">資料會自動在手機和電腦間同步</div>
+          </div>
+          <div class="settings-card" style="padding:12px 16px;margin-bottom:8px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:6px">你的 SYNC CODE</div>
+            <div style="font-size:13px;color:#666;margin-bottom:8px">在新裝置上設定同步時，需要輸入這組代碼</div>
+            <div style="background:#f5f5f5;border-radius:8px;padding:10px;font-size:13px;word-break:break-all;margin-bottom:8px">${cfg.binId}</div>
+            <button class="btn-outline" style="width:100%;margin-bottom:6px" onclick="navigator.clipboard.writeText('${cfg.binId}').then(()=>App.showNotifBanner('已複製'))">複製 Sync Code</button>
+            <button class="btn-outline" style="width:100%" onclick="App.manualSync()">立即同步</button>
+          </div>
+          <button style="width:100%;padding:12px;border:1.5px solid #e53935;border-radius:10px;background:white;color:#e53935;font-size:14px;cursor:pointer" onclick="App.disableSync()">關閉同步</button>
+        ` : `
+          <div class="settings-card" style="padding:14px 16px">
+            <div style="font-size:13px;color:#666;margin-bottom:12px;line-height:1.6">
+              啟用後，練習進度和課程資料會自動同步到所有裝置。<br>需要先有 JSONBin API Key（免費）。
+            </div>
+            <input id="eng-sync-api-key" type="password" placeholder="JSONBin API Key（$2a$...）"
+              style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:8px">
+            <input id="eng-sync-bin-id" type="text" placeholder="Sync Code（已有帳號的裝置貼上）"
+              style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:14px;box-sizing:border-box;margin-bottom:8px">
+            <div id="eng-sync-msg" style="color:red;font-size:13px;min-height:18px;margin-bottom:8px"></div>
+            <button id="eng-sync-btn" class="btn-primary" style="width:100%" onclick="App.handleSyncSetup()">啟用同步</button>
+          </div>
+        `}
+      </div>
+
+      <div class="settings-section mt-8">
+        <div class="section-title">📚 匯入新課程</div>
+        <div class="settings-card" style="padding:14px 16px">
+          <div style="font-size:13px;color:#666;margin-bottom:10px;line-height:1.6">
+            把 Claude 整理好的課程 JSON 貼在這裡，不需要重新部署 App。
+          </div>
+          <textarea id="import-lesson-input" rows="6"
+            style="width:100%;padding:10px 12px;border:1.5px solid #ddd;border-radius:8px;font-size:13px;box-sizing:border-box;margin-bottom:8px;font-family:monospace"
+            placeholder='貼上 Claude 給的課程 JSON，例如：{"id":"b2c-02","title":"..."}'></textarea>
+          <div id="import-lesson-msg" style="font-size:13px;min-height:18px;margin-bottom:8px"></div>
+          <button class="btn-primary" style="width:100%" onclick="App.handleImportLesson()">匯入課程</button>
+        </div>
+        ${loadCustomLessons().length > 0 ? `
+          <div class="settings-card" style="padding:14px 16px;margin-top:8px">
+            <div style="font-size:13px;font-weight:700;margin-bottom:8px">已匯入的課程</div>
+            ${loadCustomLessons().map(l => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0">
+                <div style="font-size:13px">${l.lessonNumber ? `第 ${l.lessonNumber} 堂 · ` : ''}${l.title}</div>
+                <button style="background:none;border:none;color:#e53935;font-size:13px;cursor:pointer" onclick="App.deleteCustomLesson('${l.id}');App.renderSettings()">刪除</button>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+      </div>
+    `;
   }
 
   function resetProgress() {
@@ -1369,6 +1632,15 @@ const App = (() => {
     flashcardKnew,
     flashcardAgain,
     exitFlashcard,
+    // Sync & Import
+    getLessonById,
+    handleSyncSetup,
+    disableSync,
+    manualSync,
+    handleImportLesson,
+    deleteCustomLesson,
+    renderSettings,
+    showNotifBanner,
     _listenSelect: null,
     _readSelect: null,
     _speakScore: null
