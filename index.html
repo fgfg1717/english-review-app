@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="英文練習">
+  <meta name="theme-color" content="#FF8C00">
+  <title>英文練習 App</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- ── LOADING ── -->
+  <div id="screen-loading" class="screen active">
+    <div class="loading-icon">📖</div>
+    <div class="loading-text">英文練習</div>
+  </div>
+
+  <!-- ── HOME ── -->
+  <div id="screen-home" class="screen">
+    <div class="app-header">
+      <div>
+        <h1>英文練習</h1>
+        <div class="subtitle" id="home-date"></div>
+      </div>
+      <button class="header-icon-btn" id="notif-btn" title="通知設定">🔔</button>
+    </div>
+
+    <div class="screen-content">
+      <!-- 未練習提醒 -->
+      <div class="reminder-banner hidden" id="reminder-banner">
+        <span>⏰</span>
+        <span>今天還沒練習！來做 5 道題熱身吧。</span>
+      </div>
+
+      <!-- 月考橫幅 -->
+      <div class="test-banner hidden" id="test-banner" onclick="App.goToTest()">
+        <div class="test-banner-icon">📋</div>
+        <div>
+          <div class="test-banner-title">本月小考開放了！</div>
+          <div class="test-banner-sub">聽說讀寫全面測驗 · 點此開始</div>
+        </div>
+        <span style="font-size:20px;opacity:0.8">›</span>
+      </div>
+
+      <!-- 今日模式卡片 -->
+      <div class="mode-card" id="mode-card">
+        <div class="mode-label" id="mode-label">今日模式</div>
+        <div class="mode-title" id="mode-title">載入中...</div>
+        <div class="mode-desc" id="mode-desc"></div>
+        <button class="mode-btn" id="mode-btn" onclick="App.startTodayPractice()">
+          <span>開始練習</span> <span>›</span>
+        </button>
+      </div>
+
+      <!-- 統計 -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-icon">🔥</div>
+          <div class="stat-value" id="streak-count">0</div>
+          <div class="stat-label">連續天數</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📚</div>
+          <div class="stat-value" id="lessons-count">0</div>
+          <div class="stat-label">完成堂數</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-value" id="practice-count">0</div>
+          <div class="stat-label">練習次數</div>
+        </div>
+      </div>
+
+      <!-- 課程清單 -->
+      <div class="section">
+        <div class="section-title">我的課程</div>
+      </div>
+      <div id="lesson-list"></div>
+    </div>
+
+    <!-- 底部導覽 -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" id="nav-home" onclick="App.navTo('home')">
+        <span class="nav-icon">🏠</span>首頁
+      </button>
+      <button class="nav-btn" id="nav-lessons" onclick="App.navTo('lessons')">
+        <span class="nav-icon">📚</span>課程
+      </button>
+      <button class="nav-btn" id="nav-test" onclick="App.navTo('test')">
+        <span class="nav-icon">📋</span>月考
+      </button>
+      <button class="nav-btn" id="nav-settings" onclick="App.navTo('settings')">
+        <span class="nav-icon">⚙️</span>設定
+      </button>
+    </nav>
+  </div>
+
+  <!-- ── PRACTICE ── -->
+  <div id="screen-practice" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.exitPractice()">←</button>
+      <div class="practice-progress-bar">
+        <div class="practice-progress-fill" id="practice-prog-fill" style="width:0%"></div>
+      </div>
+      <div class="practice-counter" id="practice-counter">1 / 5</div>
+    </div>
+
+    <div class="practice-body" id="practice-body">
+      <!-- Dynamically populated -->
+    </div>
+
+    <div class="practice-footer">
+      <button class="btn-full" id="practice-submit-btn" disabled onclick="App.submitAnswer()">
+        確認答案
+      </button>
+    </div>
+  </div>
+
+  <!-- ── RESULTS ── -->
+  <div id="screen-results" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.showScreen('home')">←</button>
+      <div class="sub-header-title">練習結果</div>
+    </div>
+
+    <div class="screen-content">
+      <div class="results-body">
+        <div class="results-emoji" id="results-emoji">🎉</div>
+        <div class="results-title" id="results-title">做得很好！</div>
+        <div class="results-subtitle" id="results-subtitle"></div>
+
+        <div class="score-ring" id="score-ring" style="--score:0">
+          <div class="score-inner">
+            <div class="score-num" id="score-num">0</div>
+            <div class="score-denom" id="score-denom">/ 5</div>
+          </div>
+        </div>
+
+        <div class="review-items" id="review-items"></div>
+
+        <button class="btn-full" onclick="App.startTodayPractice()" style="margin-top:8px">
+          再練一輪
+        </button>
+        <button class="btn-full" onclick="App.showScreen('home')" style="margin-top:8px;background:#888">
+          回首頁
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PREVIEW (LESSON DETAIL) ── -->
+  <div id="screen-preview" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.showScreen('home')">←</button>
+      <div class="sub-header-title" id="preview-header-title">課程預習</div>
+    </div>
+
+    <div class="preview-hero">
+      <div class="preview-course" id="preview-course"></div>
+      <div class="preview-title" id="preview-title"></div>
+      <div class="preview-subtitle" id="preview-subtitle"></div>
+      <div class="preview-date" id="preview-date"></div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="preview-tabs" id="preview-tabs">
+      <button class="tab-btn active" onclick="App.switchTab(0)">📋 概覽</button>
+      <button class="tab-btn" onclick="App.switchTab(1)">💬 語錄</button>
+      <button class="tab-btn" onclick="App.switchTab(2)">📖 閱讀</button>
+      <button class="tab-btn" onclick="App.switchTab(3)">🗣️ 俚語</button>
+      <button class="tab-btn" onclick="App.switchTab(4)">💡 討論</button>
+    </div>
+
+    <div class="screen-content" style="padding-top:0">
+      <!-- Tab 0: Overview -->
+      <div class="tab-panel active" id="tab-0">
+        <div id="preview-overview-list"></div>
+        <div style="padding: 0 0 16px">
+          <button class="btn-full" id="preview-practice-btn" onclick="App.startPreviewPractice()">
+            開始預習練習
+          </button>
+        </div>
+      </div>
+
+      <!-- Tab 1: Quotes -->
+      <div class="tab-panel" id="tab-1">
+        <div id="preview-quotes-list"></div>
+      </div>
+
+      <!-- Tab 2: Reading -->
+      <div class="tab-panel" id="tab-2">
+        <div id="preview-reading-list"></div>
+      </div>
+
+      <!-- Tab 3: Idioms -->
+      <div class="tab-panel" id="tab-3">
+        <div id="preview-idioms-list"></div>
+      </div>
+
+      <!-- Tab 4: Discussion -->
+      <div class="tab-panel" id="tab-4">
+        <div id="preview-discussion-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── FLASHCARD (預習卡片) ── -->
+  <div id="screen-flashcard" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.exitFlashcard()">←</button>
+      <div class="sub-header-title">預習卡片</div>
+      <div class="practice-counter" id="fc-counter">1 / 1</div>
+    </div>
+
+    <div class="fc-body" id="fc-body">
+      <!-- 動態產生 -->
+    </div>
+
+    <div class="practice-footer" id="fc-footer">
+      <button class="btn-full" id="fc-action-btn">翻轉看答案 ↓</button>
+    </div>
+  </div>
+
+  <!-- ── TEST SCREEN ── -->
+  <div id="screen-test" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.showScreen('home')">←</button>
+      <div class="sub-header-title" id="test-header-title">月考</div>
+    </div>
+
+    <div class="screen-content" id="test-content">
+      <!-- Dynamically populated -->
+    </div>
+  </div>
+
+  <!-- ── TEST RESULTS ── -->
+  <div id="screen-test-results" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.showScreen('home')">←</button>
+      <div class="sub-header-title">月考結果</div>
+    </div>
+
+    <div class="screen-content">
+      <div class="results-body">
+        <div class="results-emoji" id="test-result-emoji">🏆</div>
+        <div class="results-title" id="test-result-title">月考完成！</div>
+        <div class="score-ring" id="test-score-ring" style="--score:0">
+          <div class="score-inner">
+            <div class="score-num" id="test-score-num">0</div>
+            <div class="score-denom">/ 100</div>
+          </div>
+        </div>
+        <div class="review-items" id="test-section-breakdown"></div>
+        <button class="btn-full" onclick="App.showScreen('home')" style="margin-top:8px">
+          回首頁
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS ── -->
+  <div id="screen-settings" class="screen">
+    <div class="app-header">
+      <div>
+        <h1>設定</h1>
+        <div class="subtitle">通知與偏好</div>
+      </div>
+    </div>
+
+    <div class="screen-content">
+      <div class="settings-section">
+        <div class="section-title">通知提醒</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-icon">🔔</div>
+            <div class="settings-label">
+              <div class="settings-label-title">開啟練習提醒</div>
+              <div class="settings-label-sub" id="notif-status-text">點擊開啟通知權限</div>
+            </div>
+            <button class="toggle" id="notif-toggle" onclick="App.toggleNotifications()"></button>
+          </div>
+        </div>
+
+        <div class="alarm-list mt-12" id="alarm-list">
+          <div style="font-size:13px;font-weight:700;color:#7A4000;margin-bottom:8px">
+            📱 建議在手機設定以下鬧鐘：
+          </div>
+          <div class="alarm-item">
+            <span class="alarm-time">週一 早上 8:00</span>
+            <span class="alarm-label">預習週二課程</span>
+          </div>
+          <div class="alarm-item">
+            <span class="alarm-time">週三 早上 8:00</span>
+            <span class="alarm-label">複習週二 + 預習週四</span>
+          </div>
+          <div class="alarm-item">
+            <span class="alarm-time">週五 早上 8:00</span>
+            <span class="alarm-label">複習週四課程</span>
+          </div>
+          <div class="alarm-item">
+            <span class="alarm-time">週六 早上 8:00</span>
+            <span class="alarm-label">週末自由練習</span>
+          </div>
+          <div class="alarm-item">
+            <span class="alarm-time">週日 早上 8:00</span>
+            <span class="alarm-label">週末自由練習</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section mt-8">
+        <div class="section-title">課程管理</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-icon">✅</div>
+            <div class="settings-label">
+              <div class="settings-label-title">已完成的課程</div>
+              <div class="settings-label-sub" id="completed-lessons-text">0 堂</div>
+            </div>
+          </div>
+          <div class="settings-row" id="reset-row">
+            <div class="settings-icon">🔄</div>
+            <div class="settings-label">
+              <div class="settings-label-title">重置練習進度</div>
+              <div class="settings-label-sub">清除所有練習記錄</div>
+            </div>
+            <button class="btn-outline" style="max-width:70px;font-size:12px" onclick="App.resetProgress()">
+              重置
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section mt-8 pb-16">
+        <div class="section-title">關於</div>
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-icon">📖</div>
+            <div class="settings-label">
+              <div class="settings-label-title">英文練習 App</div>
+              <div class="settings-label-sub">外語吧主修會話 B2c · v1.0</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn" id="nav-home-s" onclick="App.navTo('home')">
+        <span class="nav-icon">🏠</span>首頁
+      </button>
+      <button class="nav-btn" id="nav-lessons-s" onclick="App.navTo('lessons')">
+        <span class="nav-icon">📚</span>課程
+      </button>
+      <button class="nav-btn" id="nav-test-s" onclick="App.navTo('test')">
+        <span class="nav-icon">📋</span>月考
+      </button>
+      <button class="nav-btn active" id="nav-settings-s" onclick="App.navTo('settings')">
+        <span class="nav-icon">⚙️</span>設定
+      </button>
+    </nav>
+  </div>
+
+  <!-- Notification toast -->
+  <div class="notif-banner" id="notif-banner">
+    <span class="notif-banner-icon">📢</span>
+    <span class="notif-banner-text" id="notif-banner-text"></span>
+    <button class="notif-banner-close" onclick="App.hideNotifBanner()">✕</button>
+  </div>
+
+</div>
+
+<script src="data/lessons.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
