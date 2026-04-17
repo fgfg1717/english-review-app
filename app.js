@@ -185,6 +185,7 @@ const App = (() => {
   }
 
   async function manualSync() {
+    await pushToCloud();
     await pullFromCloud();
     renderHome();
     renderSettings();
@@ -1643,6 +1644,4 @@ const App = (() => {
     showNotifBanner,
     _listenSelect: null,
     _readSelect: null,
-    _speakScore: null
-  };
-})();
+    _spe
