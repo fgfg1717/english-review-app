@@ -985,6 +985,7 @@ html, body {
   color: white;
   border-radius: 0 0 var(--radius) var(--radius);
   padding: 14px 16px;
+  padding-top: calc(14px + env(safe-area-inset-top));
   font-size: 14px;
   z-index: 999;
   transition: transform 0.3s ease;
