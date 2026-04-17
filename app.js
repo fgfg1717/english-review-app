@@ -236,10 +236,11 @@ const App = (() => {
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js').catch(() => {});
     }
-    pullFromCloud().then(() => {
-      renderHome();
-      showScreen('home');
-    });
+    renderHome();
+    showScreen('home');
+    pullFromCloud().then(synced => {
+      if (synced) renderHome();
+    }).catch(() => {});
   }
 
   // ── Persistence ──
@@ -1644,4 +1645,6 @@ const App = (() => {
     showNotifBanner,
     _listenSelect: null,
     _readSelect: null,
-    _spe
+    _speakScore: null
+  };
+})();
