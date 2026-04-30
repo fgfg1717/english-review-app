@@ -9,7 +9,298 @@ const App = (() => {
   const PRACTICE_Q_COUNT = 5;
   const CUSTOM_LESSONS_KEY = 'eng_custom_lessons_v1';
   const ENG_SYNC_KEY = 'eng_sync_config_v1';
+  const DAILY_TASK_KEY = 'eng_daily_tasks_v1';
   const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+
+  // ── Answer Log & Weakness Tracking ──
+  const ANSWER_LOG_KEY = 'eng_answer_log_v1';
+
+  function loadAnswerLog() {
+    try {
+      const data = JSON.parse(localStorage.getItem(ANSWER_LOG_KEY) || '[]');
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - 90);
+      const cutoffStr = cutoff.toISOString().split('T')[0];
+      return data.filter(r => r.date >= cutoffStr);
+    } catch { return []; }
+  }
+
+  function saveAnswerLog(log) {
+    localStorage.setItem(ANSWER_LOG_KEY, JSON.stringify(log.slice(-600)));
+  }
+
+  function logAnswer(tag, correct) {
+    const log = loadAnswerLog();
+    log.push({ date: todayStr(), tag, correct });
+    saveAnswerLog(log);
+  }
+
+  function getTagAccuracy(tag, log) {
+    const entries = log.filter(r => r.tag === tag);
+    if (entries.length < 3) return null;
+    return { accuracy: entries.filter(r => r.correct).length / entries.length, count: entries.length };
+  }
+
+  function getEstimatedScore() {
+    const log = loadAnswerLog();
+    const uniqueDays = new Set(state.practiceHistory.map(h => h.date)).size;
+    const practiceBonus = Math.min(uniqueDays * 1.1, 110);
+
+    const vocabData = getTagAccuracy('vocab', log);
+    const vocabAcc = vocabData ? vocabData.accuracy : 0.55;
+    const vocabBonus = Math.max(0, (vocabAcc - 0.5) * 80);
+
+    const grammarTags = ['passive', 'tense', 'preposition', 'collocation', 'word-choice', 'grammar'];
+    const grammarEntries = log.filter(r => grammarTags.includes(r.tag));
+    const grammarAcc = grammarEntries.length >= 3
+      ? grammarEntries.filter(r => r.correct).length / grammarEntries.length
+      : 0.55;
+    const grammarBonus = Math.max(0, (grammarAcc - 0.5) * 120);
+
+    return Math.round(550 + practiceBonus + vocabBonus + grammarBonus);
+  }
+
+  function getWeaknessData() {
+    const log = loadAnswerLog();
+    return Object.keys(TAG_LABELS).map(tag => {
+      const data = getTagAccuracy(tag, log);
+      return data ? { tag, accuracy: data.accuracy, count: data.count } : null;
+    }).filter(Boolean);
+  }
+
+  function renderProgress() {
+    const score = getEstimatedScore();
+    const gap   = 800 - score;
+    const pct   = Math.max(0, Math.min(100, ((score - 550) / 250) * 100));
+
+    $('progress-score').textContent = score;
+    $('score-gap').textContent = gap > 0 ? `距離目標還差 ${gap} 分` : '🎉 已達目標！';
+
+    const fill = $('score-bar-fill');
+    if (fill) {
+      fill.style.width = pct + '%';
+      fill.style.background = pct < 30 ? '#FF5722' : pct < 60 ? '#FF8C00' : pct < 80 ? '#FFC107' : '#2ECC71';
+    }
+
+    const phase = getToiecPhase();
+    const phaseEl = $('progress-phase-info');
+    if (phaseEl) phaseEl.textContent = phase.label + ' · ' + phase.sub;
+
+    // Skill breakdown
+    const weakData = getWeaknessData();
+    const breakdown = $('skill-breakdown');
+    if (breakdown) {
+      if (weakData.length === 0) {
+        breakdown.innerHTML = '<div class="no-data-msg">開始練習後會顯示技能分析</div>';
+      } else {
+        breakdown.innerHTML = '';
+        weakData.sort((a, b) => a.accuracy - b.accuracy).forEach(d => {
+          const info = TAG_LABELS[d.tag] || { label: d.tag, emoji: '📊' };
+          const p = Math.round(d.accuracy * 100);
+          const isWeak = p < 65;
+          const barColor = isWeak ? '#FF5722' : p < 75 ? '#FF8C00' : '#2ECC71';
+          const row = document.createElement('div');
+          row.className = 'skill-row' + (isWeak ? ' skill-row-weak' : '');
+          row.innerHTML = `
+            <div class="skill-row-header">
+              <span class="skill-row-name">${info.emoji} ${info.label}</span>
+              <span class="skill-row-pct" style="color:${barColor}">${p}%${isWeak ? ' ⚠️' : ''}</span>
+            </div>
+            <div class="skill-bar-track">
+              <div class="skill-bar-fill" style="width:${p}%;background:${barColor}"></div>
+            </div>
+            <div class="skill-row-count">${d.count} 題紀錄</div>
+          `;
+          breakdown.appendChild(row);
+        });
+      }
+    }
+
+    // Weekly activity
+    const weekEl = $('weekly-activity');
+    if (weekEl) {
+      weekEl.innerHTML = '';
+      const today = new Date();
+      const dayNames = ['日','一','二','三','四','五','六'];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(today);
+        d.setDate(today.getDate() - i);
+        const dStr = d.toISOString().split('T')[0];
+        const practiced = state.practiceHistory.some(h => h.date === dStr);
+        const isToday = dStr === todayStr();
+        const dot = document.createElement('div');
+        dot.className = 'week-dot';
+        dot.innerHTML = `
+          <div class="week-circle ${practiced ? 'week-done' : ''} ${isToday && !practiced ? 'week-today' : ''}">
+            ${practiced ? '✓' : ''}
+          </div>
+          <div class="week-label">週${dayNames[d.getDay()]}</div>
+        `;
+        weekEl.appendChild(dot);
+      }
+    }
+  }
+
+  // ── Daily Tasks ──
+  function loadDailyTasks() {
+    try {
+      const data = JSON.parse(localStorage.getItem(DAILY_TASK_KEY) || '{}');
+      if (data.date !== todayStr()) {
+        return { date: todayStr(), vocab: false, sentence: false, output: false };
+      }
+      return data;
+    } catch {
+      return { date: todayStr(), vocab: false, sentence: false, output: false };
+    }
+  }
+
+  function saveDailyTasks(tasks) {
+    localStorage.setItem(DAILY_TASK_KEY, JSON.stringify(tasks));
+  }
+
+  function dayOfYear() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 0);
+    return Math.floor((now - start) / 86400000);
+  }
+
+  function getTodayVocabSet() {
+    const setCount = Math.floor(TOEIC_VOCAB.length / 5);
+    const setIndex = dayOfYear() % setCount;
+    return TOEIC_VOCAB.slice(setIndex * 5, setIndex * 5 + 5);
+  }
+
+  function getTodaySentences() {
+    const count = DAILY_SENTENCES.length;
+    const start = (dayOfYear() * 3) % count;
+    return [0, 1, 2].map(i => DAILY_SENTENCES[(start + i) % count]);
+  }
+
+  function getTodayOutputPrompt() {
+    return OUTPUT_PROMPTS[dayOfYear() % OUTPUT_PROMPTS.length];
+  }
+
+  function startDailyVocab() {
+    const tasks = loadDailyTasks();
+    if (tasks.vocab) { showNotifBanner('今天的單字練習已完成！'); return; }
+    const words = getTodayVocabSet();
+    const exercises = words.map(v => {
+      const others = TOEIC_VOCAB.filter(w => w.word !== v.word);
+      const distractors = shuffle(others).slice(0, 3).map(w => w.zh);
+      return {
+        type: 'toeic-vocab',
+        typeLabel: 'TOEIC 單字',
+        typeEmoji: '📖',
+        tag: 'vocab',
+        question: `"${v.word}" 在以下句子中是什麼意思？\n\n"${v.example}"`,
+        answer: v.zh,
+        options: shuffle([v.zh, ...distractors]),
+        speakText: v.word + '. ' + v.example,
+      };
+    });
+    beginSession(exercises, 'daily-vocab');
+  }
+
+  function startDailySentence() {
+    const tasks = loadDailyTasks();
+    if (tasks.sentence) { showNotifBanner('今天的句子練習已完成！'); return; }
+    const sentences = getTodaySentences();
+    const exercises = sentences.map(s => ({
+      type: 'toeic-sentence',
+      typeLabel: 'TOEIC 句子',
+      typeEmoji: '✍️',
+      tag: s.tag || 'grammar',
+      question: s.sentence,
+      answer: s.answer,
+      options: shuffle(s.options),
+      explanation: s.explanation,
+    }));
+    beginSession(exercises, 'daily-sentence');
+  }
+
+  function startDailyOutput() {
+    const tasks = loadDailyTasks();
+    if (tasks.output) { showNotifBanner('今天的英文輸出已完成！'); return; }
+    const prompt = getTodayOutputPrompt();
+    $('output-prompt-text').textContent = prompt.prompt;
+    $('output-hint-text').textContent = '提示：' + prompt.hint;
+    $('output-example-text').textContent = prompt.example;
+    $('output-example').classList.add('hidden');
+    $('output-textarea').value = '';
+    $('output-word-count').textContent = '0 個英文字';
+    const ta = $('output-textarea');
+    ta.oninput = () => {
+      const words = ta.value.trim().split(/\s+/).filter(w => w.length > 0);
+      $('output-word-count').textContent = words.length + ' 個英文字';
+      if (words.length >= 5) $('output-example').classList.remove('hidden');
+    };
+    showScreen('daily-output');
+  }
+
+  function submitDailyOutput() {
+    const text = $('output-textarea').value.trim();
+    if (text.split(/\s+/).filter(w => w.length > 0).length < 3) {
+      showNotifBanner('請至少輸入 3 個英文字');
+      return;
+    }
+    const tasks = loadDailyTasks();
+    tasks.output = true;
+    saveDailyTasks(tasks);
+    updateStreak(true);
+    state.practiceCount++;
+    state.practiceHistory.push({ date: todayStr(), correct: 1, total: 1, type: 'daily-output' });
+    saveState();
+    showNotifBanner('英文輸出完成！');
+    showScreen('home');
+    renderHome();
+  }
+
+  function getToiecPhase() {
+    const today = todayStr();
+    if (today >= '2026-05-01' && today <= '2026-06-30') {
+      return { label: 'Phase 1 · 格式熟悉', sub: '目標 620-660 分 · 5-6月', color: '#2196F3' };
+    } else if (today >= '2026-07-01' && today <= '2026-09-30') {
+      return { label: 'Phase 2 · 弱點突破', sub: '目標 720-750 分 · 7-9月', color: '#FF8C00' };
+    } else if (today >= '2026-10-01' && today <= '2026-12-31') {
+      return { label: 'Phase 3 · 衝刺備考', sub: '目標 800 分 · 10-12月', color: '#9C27B0' };
+    }
+    return { label: '多益備考準備中', sub: '目標 800 分', color: '#4CAF50' };
+  }
+
+  function renderToiecPhase() {
+    const phase = getToiecPhase();
+    const banner = $('toeic-phase-banner');
+    if (!banner) return;
+    banner.style.background = `linear-gradient(135deg, ${phase.color}, ${phase.color}bb)`;
+    $('toeic-phase-label').textContent = phase.label;
+    $('toeic-phase-sub').textContent = phase.sub;
+  }
+
+  function renderDailyTaskSection() {
+    const tasks = loadDailyTasks();
+    const done = [tasks.vocab, tasks.sentence, tasks.output].filter(Boolean).length;
+    $('daily-tasks-progress').textContent = `${done} / 3`;
+    const icons = { vocab: '📖', sentence: '✍️', output: '🗣️' };
+    ['vocab', 'sentence', 'output'].forEach(type => {
+      const checkEl = $('task-check-' + type);
+      const itemEl  = $('task-item-' + type);
+      const isDone  = tasks[type];
+      if (checkEl) checkEl.textContent = isDone ? '✅' : icons[type];
+      if (itemEl)  itemEl.classList.toggle('task-done', isDone);
+    });
+    const card = $('daily-tasks-card');
+    if (card) card.classList.toggle('tasks-all-done', done === 3);
+    const reminderEl = $('reminder-banner');
+    const reminderText = $('reminder-text');
+    if (reminderEl) {
+      if (done === 3) {
+        reminderEl.classList.add('hidden');
+      } else {
+        reminderEl.classList.remove('hidden');
+        if (reminderText) reminderText.textContent = `今日任務還剩 ${3 - done} 項，繼續加油！`;
+      }
+    }
+  }
 
   // ── Custom Lessons ──
   function loadCustomLessons() {
@@ -276,17 +567,16 @@ const App = (() => {
   }
 
   function navTo(dest) {
-    // Update bottom nav active state
-    ['home','lessons','test','settings'].forEach(d => {
-      const btn  = $('nav-' + d);
-      const btnS = $('nav-' + d + '-s');
-      if (btn)  btn.classList.toggle('active', d === dest);
-      if (btnS) btnS.classList.toggle('active', d === dest);
+    ['home','lessons','progress','settings'].forEach(d => {
+      ['', '-s', '-p'].forEach(suffix => {
+        const btn = $('nav-' + d + suffix);
+        if (btn) btn.classList.toggle('active', d === dest);
+      });
     });
 
-    if (dest === 'home')     { renderHome(); showScreen('home'); }
-    else if (dest === 'lessons') { openFirstLesson(); }
-    else if (dest === 'test')    { goToTest(); }
+    if (dest === 'home')          { renderHome();     showScreen('home'); }
+    else if (dest === 'lessons')  { openFirstLesson(); }
+    else if (dest === 'progress') { renderProgress(); showScreen('progress'); }
     else if (dest === 'settings') { renderSettings(); showScreen('settings'); }
   }
 
@@ -350,22 +640,18 @@ const App = (() => {
 
   // ── Home Screen ──
   function renderHome() {
-    const modeInfo = getTodayMode();
     const today = new Date();
     const days = ['週日','週一','週二','週三','週四','週五','週六'];
     $('home-date').textContent = `${today.getMonth()+1}/${today.getDate()} ${days[today.getDay()]}`;
-
-    $('mode-label').textContent = modeInfo.label;
-    $('mode-title').textContent = modeInfo.emoji + ' ' + modeInfo.title;
-    $('mode-desc').textContent  = modeInfo.desc;
 
     $('streak-count').textContent   = state.streak.count;
     $('lessons-count').textContent  = state.completedLessons.length;
     $('practice-count').textContent = state.practiceCount;
 
-    $('reminder-banner').classList.toggle('hidden', practicedToday());
     $('test-banner').classList.toggle('hidden', !isLastWeekendOfMonth());
 
+    renderToiecPhase();
+    renderDailyTaskSection();
     renderLessonList();
   }
 
@@ -929,6 +1215,8 @@ const App = (() => {
       answer: q.answer,
       correct: isCorrect,
       type: q.typeLabel,
+      exerciseType: q.type,
+      tag: q.tag || null,
       explanation: q.explanation || ''
     });
 
@@ -976,6 +1264,25 @@ const App = (() => {
 
   function finishSession() {
     const sess = state.session;
+
+    // Log each answer for weakness tracking
+    sess.answers.forEach(a => {
+      let tag = a.tag;
+      if (!tag) {
+        if (a.exerciseType === 'toeic-vocab' || a.exerciseType === 'vocabulary') tag = 'vocab';
+        else if (a.exerciseType === 'idiom-fill') tag = 'collocation';
+        else tag = 'grammar';
+      }
+      logAnswer(tag, a.correct);
+    });
+
+    // Mark daily tasks done if applicable
+    if (sess.type === 'daily-vocab' || sess.type === 'daily-sentence') {
+      const tasks = loadDailyTasks();
+      if (sess.type === 'daily-vocab')    tasks.vocab    = true;
+      if (sess.type === 'daily-sentence') tasks.sentence = true;
+      saveDailyTasks(tasks);
+    }
 
     // Update state
     state.practiceCount++;
@@ -1629,6 +1936,13 @@ const App = (() => {
     toggleNotifications,
     hideNotifBanner,
     resetProgress,
+    // Daily Tasks
+    startDailyVocab,
+    startDailySentence,
+    startDailyOutput,
+    submitDailyOutput,
+    // Progress
+    renderProgress,
     // Flashcard
     revealFlashcard,
     flashcardKnew,

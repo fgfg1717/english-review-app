@@ -33,10 +33,10 @@
     </div>
 
     <div class="screen-content">
-      <!-- 未練習提醒 -->
+      <!-- 未完成提醒 -->
       <div class="reminder-banner hidden" id="reminder-banner">
         <span>⏰</span>
-        <span>今天還沒練習！來做 5 道題熱身吧。</span>
+        <span id="reminder-text">今日任務還沒完成！</span>
       </div>
 
       <!-- 月考橫幅 -->
@@ -49,14 +49,48 @@
         <span style="font-size:20px;opacity:0.8">›</span>
       </div>
 
-      <!-- 今日模式卡片 -->
-      <div class="mode-card" id="mode-card">
-        <div class="mode-label" id="mode-label">今日模式</div>
-        <div class="mode-title" id="mode-title">載入中...</div>
-        <div class="mode-desc" id="mode-desc"></div>
-        <button class="mode-btn" id="mode-btn" onclick="App.startTodayPractice()">
-          <span>開始練習</span> <span>›</span>
-        </button>
+      <!-- TOEIC 備考進度 -->
+      <div class="toeic-phase-banner" id="toeic-phase-banner">
+        <div class="toeic-phase-left">
+          <div class="toeic-phase-label" id="toeic-phase-label">Phase 1</div>
+          <div class="toeic-phase-sub" id="toeic-phase-sub">目標 620 分 · 5-6月</div>
+        </div>
+        <div class="toeic-phase-right">
+          <div style="font-size:11px;opacity:0.85">多益備考中</div>
+          <div style="font-size:13px;font-weight:700">目標 800 分</div>
+        </div>
+      </div>
+
+      <!-- 今日任務 -->
+      <div class="daily-tasks-card" id="daily-tasks-card">
+        <div class="daily-tasks-header">
+          <div class="daily-tasks-title">今日任務</div>
+          <div class="daily-tasks-progress" id="daily-tasks-progress">0 / 3</div>
+        </div>
+        <div class="daily-task-item" id="task-item-vocab" onclick="App.startDailyVocab()">
+          <div class="task-icon" id="task-check-vocab">📖</div>
+          <div class="task-info">
+            <div class="task-title">TOEIC 單字</div>
+            <div class="task-desc">今日 5 個高頻單字</div>
+          </div>
+          <span class="task-arrow">›</span>
+        </div>
+        <div class="daily-task-item" id="task-item-sentence" onclick="App.startDailySentence()">
+          <div class="task-icon" id="task-check-sentence">✍️</div>
+          <div class="task-info">
+            <div class="task-title">句子填空</div>
+            <div class="task-desc">TOEIC 文法練習 3 題</div>
+          </div>
+          <span class="task-arrow">›</span>
+        </div>
+        <div class="daily-task-item" id="task-item-output" onclick="App.startDailyOutput()">
+          <div class="task-icon" id="task-check-output">🗣️</div>
+          <div class="task-info">
+            <div class="task-title">英文輸出</div>
+            <div class="task-desc">用英文寫一句話</div>
+          </div>
+          <span class="task-arrow">›</span>
+        </div>
       </div>
 
       <!-- 統計 -->
@@ -80,7 +114,7 @@
 
       <!-- 課程清單 -->
       <div class="section">
-        <div class="section-title">我的課程</div>
+        <div class="section-title">課程複習</div>
       </div>
       <div id="lesson-list"></div>
     </div>
@@ -93,8 +127,8 @@
       <button class="nav-btn" id="nav-lessons" onclick="App.navTo('lessons')">
         <span class="nav-icon">📚</span>課程
       </button>
-      <button class="nav-btn" id="nav-test" onclick="App.navTo('test')">
-        <span class="nav-icon">📋</span>月考
+      <button class="nav-btn" id="nav-progress" onclick="App.navTo('progress')">
+        <span class="nav-icon">📈</span>進度
       </button>
       <button class="nav-btn" id="nav-settings" onclick="App.navTo('settings')">
         <span class="nav-icon">⚙️</span>設定
@@ -361,13 +395,127 @@
       <button class="nav-btn" id="nav-lessons-s" onclick="App.navTo('lessons')">
         <span class="nav-icon">📚</span>課程
       </button>
-      <button class="nav-btn" id="nav-test-s" onclick="App.navTo('test')">
-        <span class="nav-icon">📋</span>月考
+      <button class="nav-btn" id="nav-progress-s" onclick="App.navTo('progress')">
+        <span class="nav-icon">📈</span>進度
       </button>
       <button class="nav-btn active" id="nav-settings-s" onclick="App.navTo('settings')">
         <span class="nav-icon">⚙️</span>設定
       </button>
     </nav>
+  </div>
+
+  <!-- ── PROGRESS ── -->
+  <div id="screen-progress" class="screen">
+    <div class="app-header">
+      <div>
+        <h1>學習進度</h1>
+        <div class="subtitle" id="progress-phase-info">距離目標多遠</div>
+      </div>
+      <button class="header-icon-btn" onclick="App.goToTest()" title="月考">📋</button>
+    </div>
+
+    <div class="screen-content">
+
+      <!-- TOEIC 分數進度 -->
+      <div class="score-hero-card">
+        <div class="score-hero-label">估計 TOEIC 分數</div>
+        <div class="score-hero-number" id="progress-score">550</div>
+        <div class="score-hero-sublabel">根據練習表現估算，僅供參考</div>
+
+        <div class="score-progress-wrap">
+          <div class="score-progress-track">
+            <div class="score-progress-fill" id="score-bar-fill" style="width:0%"></div>
+          </div>
+          <div class="score-progress-labels">
+            <span>起點 550</span>
+            <span>目標 800</span>
+          </div>
+        </div>
+
+        <div class="score-gap-badge" id="score-gap">距離目標還差 250 分</div>
+      </div>
+
+      <!-- 技能分析 -->
+      <div class="section">
+        <div class="section-title">各項技能正確率</div>
+      </div>
+      <div class="progress-card" id="skill-breakdown">
+        <div class="no-data-msg">開始練習後會顯示技能分析</div>
+      </div>
+
+      <!-- 本週練習 -->
+      <div class="section">
+        <div class="section-title">本週練習紀錄</div>
+      </div>
+      <div class="weekly-wrap">
+        <div class="weekly-activity" id="weekly-activity"></div>
+      </div>
+
+      <!-- 月考入口 -->
+      <div class="section mt-8 pb-16">
+        <div class="section-title">月考</div>
+        <div style="padding: 0 16px 24px">
+          <button class="btn-full" onclick="App.goToTest()" style="background:linear-gradient(135deg,#6C3483,#9B59B6)">
+            開始本月小考 →
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn" id="nav-home-p" onclick="App.navTo('home')">
+        <span class="nav-icon">🏠</span>首頁
+      </button>
+      <button class="nav-btn" id="nav-lessons-p" onclick="App.navTo('lessons')">
+        <span class="nav-icon">📚</span>課程
+      </button>
+      <button class="nav-btn active" id="nav-progress-p" onclick="App.navTo('progress')">
+        <span class="nav-icon">📈</span>進度
+      </button>
+      <button class="nav-btn" id="nav-settings-p" onclick="App.navTo('settings')">
+        <span class="nav-icon">⚙️</span>設定
+      </button>
+    </nav>
+  </div>
+
+  <!-- ── DAILY OUTPUT ── -->
+  <div id="screen-daily-output" class="screen">
+    <div class="sub-header">
+      <button class="back-btn" onclick="App.showScreen('home')">←</button>
+      <div class="sub-header-title">英文輸出練習</div>
+    </div>
+
+    <div class="screen-content">
+      <div style="padding: 20px 16px 0;">
+        <div class="output-prompt-card">
+          <div class="output-prompt-emoji">🗣️</div>
+          <div class="output-prompt-text" id="output-prompt-text">今天最重要的工作任務是什麼？</div>
+          <div class="output-prompt-hint" id="output-hint-text"></div>
+        </div>
+
+        <div class="output-label">用英文寫你的回答：</div>
+        <textarea class="writing-input" id="output-textarea"
+          placeholder="用英文寫一句或幾句話..."
+          style="min-height:120px; margin-bottom:6px;"></textarea>
+        <div class="output-word-count" id="output-word-count">0 個英文字</div>
+
+        <div class="output-example hidden" id="output-example">
+          <div class="output-example-label">參考範例：</div>
+          <div class="output-example-text" id="output-example-text"></div>
+        </div>
+
+        <div class="output-tip">
+          不需要完美，寫出來就是練習。<br>每天持續才是關鍵！
+        </div>
+      </div>
+    </div>
+
+    <div class="practice-footer">
+      <button class="btn-full" id="output-submit-btn" onclick="App.submitDailyOutput()">
+        完成輸出 ✓
+      </button>
+    </div>
   </div>
 
   <!-- Notification toast -->
@@ -379,6 +527,8 @@
 
 </div>
 
+<script src="data/toeic-vocab.js"></script>
+<script src="data/daily-exercises.js"></script>
 <script src="data/lessons.js"></script>
 <script src="app.js"></script>
 </body>

@@ -1170,3 +1170,331 @@ html, body {
 
 .fc-progress-title { font-size: 20px; font-weight: 800; margin-bottom: 6px; }
 .fc-progress-sub { font-size: 14px; color: var(--muted); margin-bottom: 16px; }
+
+/* ── TOEIC Phase Banner ── */
+.toeic-phase-banner {
+  margin: 0 16px 12px;
+  background: linear-gradient(135deg, #2196F3, #2196F3bb);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toeic-phase-left { flex: 1; }
+.toeic-phase-label { font-size: 14px; font-weight: 800; margin-bottom: 2px; }
+.toeic-phase-sub { font-size: 12px; opacity: 0.88; }
+.toeic-phase-right { text-align: right; flex-shrink: 0; }
+
+/* ── Daily Tasks Card ── */
+.daily-tasks-card {
+  margin: 0 16px 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  transition: box-shadow 0.2s;
+}
+
+.daily-tasks-card.tasks-all-done {
+  box-shadow: 0 4px 16px rgba(46, 204, 113, 0.25);
+  border: 1.5px solid #A8E6C7;
+}
+
+.daily-tasks-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.daily-tasks-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.daily-tasks-progress {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.daily-task-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.daily-task-item:last-child { border-bottom: none; }
+.daily-task-item:active { background: var(--primary-light); }
+.daily-task-item.task-done { opacity: 0.6; cursor: default; }
+.daily-task-item.task-done:active { background: transparent; }
+
+.task-icon {
+  font-size: 22px;
+  width: 36px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.task-info { flex: 1; }
+.task-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.task-desc { font-size: 12px; color: var(--muted); }
+
+.task-arrow {
+  font-size: 20px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.daily-task-item.task-done .task-arrow { display: none; }
+
+/* ── Daily Output Screen ── */
+.output-prompt-card {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  border-radius: var(--radius);
+  padding: 22px 20px;
+  color: white;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.output-prompt-emoji { font-size: 40px; margin-bottom: 10px; }
+.output-prompt-text { font-size: 17px; font-weight: 700; line-height: 1.5; margin-bottom: 8px; }
+.output-prompt-hint { font-size: 13px; opacity: 0.88; line-height: 1.5; }
+
+.output-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 8px;
+}
+
+.output-word-count {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+  margin-bottom: 12px;
+}
+
+.output-example {
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+}
+
+.output-example.hidden { display: none; }
+.output-example-label { font-size: 12px; font-weight: 700; color: var(--primary-dark); margin-bottom: 4px; }
+.output-example-text { font-size: 14px; color: var(--text); line-height: 1.6; font-style: italic; }
+
+.output-tip {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+  padding: 12px 0 24px;
+}
+
+/* ── PROGRESS SCREEN ── */
+
+.score-hero-card {
+  margin: 16px;
+  background: linear-gradient(160deg, #1A1A2E 0%, #2D2D4E 100%);
+  border-radius: var(--radius);
+  padding: 28px 24px 24px;
+  color: white;
+  text-align: center;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+}
+
+.score-hero-label {
+  font-size: 12px;
+  opacity: 0.7;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.score-hero-number {
+  font-size: 72px;
+  font-weight: 900;
+  line-height: 1;
+  color: var(--primary);
+  margin-bottom: 4px;
+}
+
+.score-hero-sublabel {
+  font-size: 11px;
+  opacity: 0.5;
+  margin-bottom: 24px;
+}
+
+.score-progress-wrap {
+  margin-bottom: 16px;
+}
+
+.score-progress-track {
+  height: 10px;
+  background: rgba(255,255,255,0.12);
+  border-radius: 5px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.score-progress-fill {
+  height: 100%;
+  border-radius: 5px;
+  transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.score-progress-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.score-gap-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 20px;
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Skill bars */
+.progress-card {
+  margin: 0 16px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  padding: 4px 0;
+}
+
+.skill-row {
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border);
+}
+
+.skill-row:last-child { border-bottom: none; }
+
+.skill-row-weak {
+  background: #FFF5F3;
+}
+
+.skill-row-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.skill-row-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.skill-row-pct {
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.skill-bar-track {
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.skill-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+
+.skill-row-count {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.no-data-msg {
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* Weekly activity */
+.weekly-wrap {
+  padding: 0 16px 4px;
+}
+
+.weekly-activity {
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+}
+
+.week-dot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.week-circle {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--muted);
+  background: var(--bg);
+  transition: all 0.2s;
+}
+
+.week-circle.week-done {
+  background: var(--success);
+  border-color: var(--success);
+  color: white;
+}
+
+.week-circle.week-today {
+  border-color: var(--primary);
+  color: var(--primary);
+  font-weight: 800;
+}
+
+.week-label {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 600;
+}
