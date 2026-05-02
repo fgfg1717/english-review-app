@@ -243,6 +243,7 @@ const App = (() => {
       showNotifBanner('請至少輸入 3 個英文字');
       return;
     }
+    const prompt = getTodayOutputPrompt();
     const tasks = loadDailyTasks();
     tasks.output = true;
     saveDailyTasks(tasks);
@@ -250,9 +251,70 @@ const App = (() => {
     state.practiceCount++;
     state.practiceHistory.push({ date: todayStr(), correct: 1, total: 1, type: 'daily-output' });
     saveState();
-    showNotifBanner('英文輸出完成！');
+
+    // 顯示批改區
+    $('output-review-user-text').textContent = text;
+    $('output-review-example-text').textContent = prompt.example;
+    const copyBtn = $('output-copy-review-btn');
+    if (copyBtn) {
+      copyBtn.onclick = () => {
+        const msg = `請幫我批改這段英文輸出，指出文法或用詞問題，並給我一個修改版本：\n\n"${text}"`;
+        navigator.clipboard.writeText(msg)
+          .then(() => showNotifBanner('已複製！貼到 Claude.ai 就能收到修改建議'))
+          .catch(() => showNotifBanner('請手動複製上方文字'));
+      };
+    }
+    $('output-main-content').classList.add('hidden');
+    $('output-footer').classList.add('hidden');
+    $('output-review').classList.remove('hidden');
+  }
+
+  function closeOutputReview() {
+    $('output-main-content').classList.remove('hidden');
+    $('output-footer').classList.remove('hidden');
+    $('output-review').classList.add('hidden');
     showScreen('home');
     renderHome();
+  }
+
+  function startExtraPractice() {
+    const setCount = Math.floor(TOEIC_VOCAB.length / 5);
+    const todayIdx = dayOfYear() % setCount;
+    const extraIdx = (todayIdx + 1) % setCount;
+    const extraWords = TOEIC_VOCAB.slice(extraIdx * 5, extraIdx * 5 + 5);
+
+    const todaySents = getTodaySentences();
+    const extraSentences = shuffle(
+      DAILY_SENTENCES.filter(s => !todaySents.includes(s))
+    ).slice(0, 3);
+
+    const vocabExercises = extraWords.map(v => {
+      const others = TOEIC_VOCAB.filter(w => w.word !== v.word);
+      const distractors = shuffle(others).slice(0, 3).map(w => w.zh);
+      return {
+        type: 'toeic-vocab',
+        typeLabel: 'TOEIC 單字',
+        typeEmoji: '📖',
+        tag: 'vocab',
+        question: `"${v.word}" 在以下句子中是什麼意思？\n\n"${v.example}"`,
+        answer: v.zh,
+        options: shuffle([v.zh, ...distractors]),
+        speakText: v.word + '. ' + v.example,
+      };
+    });
+
+    const sentExercises = extraSentences.map(s => ({
+      type: 'toeic-sentence',
+      typeLabel: 'TOEIC 句子',
+      typeEmoji: '✍️',
+      tag: s.tag || 'grammar',
+      question: s.sentence,
+      answer: s.answer,
+      options: shuffle(s.options),
+      explanation: s.explanation,
+    }));
+
+    beginSession([...vocabExercises, ...sentExercises], 'extra-practice');
   }
 
   function getToiecPhase() {
@@ -290,6 +352,8 @@ const App = (() => {
     });
     const card = $('daily-tasks-card');
     if (card) card.classList.toggle('tasks-all-done', done === 3);
+    const extraBtn = $('extra-practice-btn');
+    if (extraBtn) extraBtn.classList.toggle('hidden', done < 3);
     const reminderEl = $('reminder-banner');
     const reminderText = $('reminder-text');
     if (reminderEl) {
@@ -1941,6 +2005,8 @@ const App = (() => {
     startDailySentence,
     startDailyOutput,
     submitDailyOutput,
+    closeOutputReview,
+    startExtraPractice,
     // Progress
     renderProgress,
     // Flashcard

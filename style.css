@@ -1498,3 +1498,82 @@ html, body {
   color: var(--muted);
   font-weight: 600;
 }
+
+/* ── Extra Practice Button ── */
+.extra-practice-btn {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 10px 12px 4px;
+  padding: 12px;
+  background: linear-gradient(135deg, #FF8C00, #FF6D00);
+  color: white;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: center;
+  letter-spacing: 0.3px;
+  box-shadow: 0 2px 8px rgba(255,140,0,0.35);
+  transition: opacity 0.2s, transform 0.1s;
+}
+
+.extra-practice-btn:active {
+  transform: scale(0.98);
+  opacity: 0.9;
+}
+
+/* ── Output Review Section ── */
+.output-review-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.output-review-block {
+  background: var(--card);
+  border-radius: var(--radius-sm);
+  padding: 14px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow);
+}
+
+.output-review-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--muted);
+  letter-spacing: 0.5px;
+  margin-bottom: 8px;
+}
+
+.output-review-user-text {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text);
+  font-style: italic;
+}
+
+.output-review-example-text {
+  font-size: 14px;
+  line-height: 1.65;
+  color: #2D6A4F;
+  font-weight: 600;
+}
+
+.output-review-tip {
+  font-size: 13px;
+  color: #7A4000;
+  background: var(--primary-light);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 14px;
+  line-height: 1.6;
+}
+
+.output-copy-btn {
+  background: linear-gradient(135deg, #5B2C87, #8E44AD) !important;
+  margin-bottom: 0 !important;
+}

@@ -91,6 +91,9 @@
           </div>
           <span class="task-arrow">›</span>
         </div>
+        <button class="extra-practice-btn hidden" id="extra-practice-btn" onclick="App.startExtraPractice()">
+          ＋ 繼續練習（不同題目）
+        </button>
       </div>
 
       <!-- 統計 -->
@@ -487,7 +490,7 @@
     </div>
 
     <div class="screen-content">
-      <div style="padding: 20px 16px 0;">
+      <div id="output-main-content" style="padding: 20px 16px 0;">
         <div class="output-prompt-card">
           <div class="output-prompt-emoji">🗣️</div>
           <div class="output-prompt-text" id="output-prompt-text">今天最重要的工作任務是什麼？</div>
@@ -509,9 +512,31 @@
           不需要完美，寫出來就是練習。<br>每天持續才是關鍵！
         </div>
       </div>
+
+      <!-- 提交後的批改區 -->
+      <div class="output-review hidden" id="output-review" style="padding: 20px 16px;">
+        <div class="output-review-title">🎉 完成！來對照看看</div>
+        <div class="output-review-block">
+          <div class="output-review-label">你寫的：</div>
+          <div class="output-review-user-text" id="output-review-user-text"></div>
+        </div>
+        <div class="output-review-block">
+          <div class="output-review-label">參考範例：</div>
+          <div class="output-review-example-text" id="output-review-example-text"></div>
+        </div>
+        <div class="output-review-tip">
+          💡 想知道哪裡可以更好？點下方按鈕，把提示貼到 Claude.ai 就能收到完整批改建議。
+        </div>
+        <button class="btn-full output-copy-btn" id="output-copy-review-btn">
+          📋 複製批改提示 → 貼到 Claude.ai
+        </button>
+        <button class="btn-full" onclick="App.closeOutputReview()" style="background:#888;margin-top:10px">
+          回首頁
+        </button>
+      </div>
     </div>
 
-    <div class="practice-footer">
+    <div class="practice-footer" id="output-footer">
       <button class="btn-full" id="output-submit-btn" onclick="App.submitDailyOutput()">
         完成輸出 ✓
       </button>
