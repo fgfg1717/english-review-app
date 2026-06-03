@@ -213,6 +213,7 @@
       <button class="tab-btn" onclick="App.switchTab(2)">📖 閱讀</button>
       <button class="tab-btn" onclick="App.switchTab(3)">🗣️ 俚語</button>
       <button class="tab-btn" onclick="App.switchTab(4)">💡 討論</button>
+      <button class="tab-btn" onclick="App.switchTab(5)">📚 單字</button>
     </div>
 
     <div class="screen-content" style="padding-top:0">
@@ -244,6 +245,14 @@
       <!-- Tab 4: Discussion -->
       <div class="tab-panel" id="tab-4">
         <div id="preview-discussion-list"></div>
+      </div>
+
+      <!-- Tab 5: Vocabulary -->
+      <div class="tab-panel" id="tab-5">
+        <div style="padding: 14px 16px 4px">
+          <div style="font-size:13px;font-weight:700;color:var(--muted)">📚 本課單字</div>
+        </div>
+        <div id="preview-vocab-list" style="padding: 0 16px 24px"></div>
       </div>
     </div>
   </div>

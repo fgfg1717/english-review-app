@@ -368,7 +368,20 @@ const App = (() => {
 
   // ── Custom Lessons ──
   function loadCustomLessons() {
-    try { return JSON.parse(localStorage.getItem(CUSTOM_LESSONS_KEY) || '[]'); } catch { return []; }
+    try {
+      const lessons = JSON.parse(localStorage.getItem(CUSTOM_LESSONS_KEY) || '[]');
+      return lessons.map(lesson => {
+        if (Array.isArray(lesson.vocabulary)) {
+          const seen = new Set();
+          lesson.vocabulary = lesson.vocabulary.filter(v => !seen.has(v.word) && seen.add(v.word));
+        }
+        if (Array.isArray(lesson.idioms)) {
+          const seen = new Set();
+          lesson.idioms = lesson.idioms.filter(i => !seen.has(i.phrase) && seen.add(i.phrase));
+        }
+        return lesson;
+      });
+    } catch { return []; }
   }
 
   function saveCustomLessons(lessons) {
@@ -389,6 +402,14 @@ const App = (() => {
     let lesson;
     try { lesson = JSON.parse(jsonText.trim()); } catch { throw new Error('JSON 格式有誤，請重新複製'); }
     if (!lesson.id || !lesson.title) throw new Error('缺少必要欄位（id 或 title）');
+    if (Array.isArray(lesson.vocabulary)) {
+      const seen = new Set();
+      lesson.vocabulary = lesson.vocabulary.filter(v => !seen.has(v.word) && seen.add(v.word));
+    }
+    if (Array.isArray(lesson.idioms)) {
+      const seen = new Set();
+      lesson.idioms = lesson.idioms.filter(i => !seen.has(i.phrase) && seen.add(i.phrase));
+    }
     const custom = loadCustomLessons();
     const existing = custom.findIndex(l => l.id === lesson.id);
     if (existing >= 0) custom[existing] = lesson;
@@ -842,6 +863,24 @@ const App = (() => {
       `;
       dList.appendChild(card);
     });
+
+    // Tab 5: Vocabulary
+    const vList = $('preview-vocab-list');
+    if (vList) {
+      vList.innerHTML = '';
+      const seenVocab = new Set();
+      (lesson.vocabulary || []).filter(v => !seenVocab.has(v.word) && seenVocab.add(v.word)).forEach(v => {
+        const row = el('div', 'vocab-row');
+        row.innerHTML = `
+          <div class="vocab-main">
+            <span class="vocab-word">${v.word}</span>
+            <span class="vocab-zh">${v.zh}</span>
+          </div>
+          ${mkSpeakBtn(v.word + (v.example ? '. ' + v.example : ''))}
+        `;
+        vList.appendChild(row);
+      });
+    }
 
     // Reset to first tab
     switchTab(0);

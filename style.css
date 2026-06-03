@@ -721,6 +721,19 @@ html, body {
 .idiom-meaning { font-size: 14px; color: var(--text); margin-bottom: 8px; }
 .idiom-example { font-size: 13px; color: var(--muted); font-style: italic; line-height: 1.5; }
 
+/* Vocabulary rows */
+.vocab-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px dashed var(--border);
+}
+.vocab-row:last-child { border-bottom: none; }
+.vocab-main { display: flex; align-items: baseline; gap: 10px; flex: 1; min-width: 0; }
+.vocab-word { font-size: 16px; font-weight: 700; color: var(--text); white-space: nowrap; }
+.vocab-zh { font-size: 13px; color: var(--muted); }
+
 /* Tabs */
 .preview-tabs {
   display: flex;
