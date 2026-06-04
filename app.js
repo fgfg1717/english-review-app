@@ -1108,6 +1108,10 @@ const App = (() => {
       actionBtn.className = 'btn-full';
       actionBtn.onclick = revealFlashcard;
     }
+
+    // 卡片出現時自動播發音（訓練「聽到聲音→懂意思」）
+    const autoSpeakText = card.readOnly ? card.quoteText : card.front;
+    if (autoSpeakText) setTimeout(() => speakWord(autoSpeakText), 400);
   }
 
   function revealFlashcard() {
@@ -1120,6 +1124,10 @@ const App = (() => {
     const actionBtn = $('fc-action-btn');
     actionBtn.textContent = '跳過，下一張 →';
     actionBtn.onclick = () => nextFlashcard(false);
+
+    // 翻牌時自動播例句（聽到單字在句子裡的用法）
+    const card = fc.cards[fc.index];
+    if (card.example) setTimeout(() => speakWord(card.example), 300);
   }
 
   function flashcardKnew() {
