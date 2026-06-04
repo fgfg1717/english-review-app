@@ -882,6 +882,50 @@ const App = (() => {
       });
     }
 
+    // Tab 6: Listening / Transcript
+    const listenArea = $('preview-listening-area');
+    if (listenArea) {
+      listenArea.innerHTML = '';
+      if (lesson.listening && lesson.listening.transcript) {
+        const title = lesson.listening.title || '本課聽力逐字稿';
+        const fullText = lesson.listening.transcript;
+
+        const header = el('div', '');
+        header.innerHTML = `<div style="font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px">🎧 ${title}</div>`;
+        listenArea.appendChild(header);
+
+        const speedRow = el('div', '');
+        speedRow.style.cssText = 'display:flex;gap:8px;margin-bottom:12px';
+        speedRow.innerHTML = `
+          <button id="listen-speed-slow" class="btn-outline" style="flex:1;font-size:13px;border-color:var(--primary);color:var(--primary);font-weight:700"
+            onclick="App.setTranscriptSpeed(0.72)">🐢 慢速 0.7×</button>
+          <button id="listen-speed-norm" class="btn-outline" style="flex:1;font-size:13px"
+            onclick="App.setTranscriptSpeed(0.88)">▶ 標準 0.9×</button>
+        `;
+        listenArea.appendChild(speedRow);
+
+        const playBtn = el('button', 'btn-full');
+        playBtn.id = 'transcript-play-btn';
+        playBtn.textContent = '🎧 播放全文';
+        playBtn.onclick = function() { speakText(this, fullText); };
+        listenArea.appendChild(playBtn);
+
+        const textBox = el('div', '');
+        textBox.style.cssText = 'background:white;border:1.5px solid var(--border);border-radius:12px;padding:16px;margin-top:14px;font-size:14px;line-height:2;color:var(--text)';
+        textBox.textContent = fullText;
+        listenArea.appendChild(textBox);
+
+        state._transcriptSpeed = 0.72;
+      } else {
+        listenArea.innerHTML = `
+          <div style="text-align:center;padding:32px 16px;color:var(--muted)">
+            <div style="font-size:32px;margin-bottom:10px">🎧</div>
+            <div style="font-size:14px;font-weight:700;margin-bottom:6px">尚無逐字稿</div>
+            <div style="font-size:13px;line-height:1.7">匯入課程 JSON 時加入 <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">listening</code> 欄位即可</div>
+          </div>`;
+      }
+    }
+
     // Reset to first tab
     switchTab(0);
     showScreen('preview');
@@ -1837,7 +1881,7 @@ const App = (() => {
 
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'en-US';
-    utter.rate = 0.88;
+    utter.rate = (btn.id === 'transcript-play-btn' && state._transcriptSpeed) ? state._transcriptSpeed : 0.88;
     utter.pitch = 1;
 
     btn.classList.add('playing');
@@ -1859,6 +1903,22 @@ const App = (() => {
     utter.lang = 'en-US';
     utter.rate = 0.85;
     window.speechSynthesis.speak(utter);
+  }
+
+  // 逐字稿播放速度切換
+  function setTranscriptSpeed(rate) {
+    state._transcriptSpeed = rate;
+    const slowBtn = $('listen-speed-slow');
+    const normBtn = $('listen-speed-norm');
+    if (slowBtn && normBtn) {
+      const isSlow = rate < 0.8;
+      slowBtn.style.borderColor = isSlow ? 'var(--primary)' : 'var(--border)';
+      slowBtn.style.color       = isSlow ? 'var(--primary)' : 'var(--muted)';
+      slowBtn.style.fontWeight  = isSlow ? '700' : '400';
+      normBtn.style.borderColor = isSlow ? 'var(--border)' : 'var(--primary)';
+      normBtn.style.color       = isSlow ? 'var(--muted)' : 'var(--primary)';
+      normBtn.style.fontWeight  = isSlow ? '400' : '700';
+    }
   }
 
   // 回傳 🔊 按鈕 HTML 字串（供 innerHTML 模板使用）
@@ -2072,6 +2132,7 @@ const App = (() => {
     showNotifBanner,
     _listenSelect: null,
     _readSelect: null,
-    _speakScore: null
+    _speakScore: null,
+    setTranscriptSpeed
   };
 })();
