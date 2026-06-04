@@ -882,11 +882,14 @@ const App = (() => {
       });
     }
 
-    // Tab 6: Listening / Transcript
+    // Tab 6: Listening / Transcript（只在有逐字稿時顯示）
+    const listenTabBtn = $('tab-btn-listening');
     const listenArea = $('preview-listening-area');
+    const hasTranscript = !!(lesson.listening && lesson.listening.transcript);
+    if (listenTabBtn) listenTabBtn.style.display = hasTranscript ? '' : 'none';
     if (listenArea) {
       listenArea.innerHTML = '';
-      if (lesson.listening && lesson.listening.transcript) {
+      if (hasTranscript) {
         const title = lesson.listening.title || '本課聽力逐字稿';
         const fullText = lesson.listening.transcript;
 
@@ -916,13 +919,6 @@ const App = (() => {
         listenArea.appendChild(textBox);
 
         state._transcriptSpeed = 0.72;
-      } else {
-        listenArea.innerHTML = `
-          <div style="text-align:center;padding:32px 16px;color:var(--muted)">
-            <div style="font-size:32px;margin-bottom:10px">🎧</div>
-            <div style="font-size:14px;font-weight:700;margin-bottom:6px">尚無逐字稿</div>
-            <div style="font-size:13px;line-height:1.7">匯入課程 JSON 時加入 <code style="background:#f0f0f0;padding:2px 6px;border-radius:4px">listening</code> 欄位即可</div>
-          </div>`;
       }
     }
 
