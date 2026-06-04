@@ -425,6 +425,22 @@ const App = (() => {
     pushToCloud();
   }
 
+  function addTranscriptToLesson(id) {
+    const custom = loadCustomLessons();
+    const lesson = custom.find(l => l.id === id);
+    if (!lesson) return;
+    const existing = lesson.listening || {};
+    const title = prompt('逐字稿標題（例如：影片名稱）：', existing.title || '');
+    if (title === null) return;
+    const transcript = prompt('貼上逐字稿全文：', existing.transcript || '');
+    if (transcript === null) return;
+    lesson.listening = { title: title.trim(), transcript: transcript.trim() };
+    saveCustomLessons(custom);
+    pushToCloud();
+    showNotifBanner(`✅ 已更新「${lesson.title}」的逐字稿`);
+    renderSettings();
+  }
+
   // ── Sync (JSONBin) ──
   function loadSyncConfig() {
     try { return JSON.parse(localStorage.getItem(ENG_SYNC_KEY) || '{"apiKey":"","binId":""}'); } catch { return { apiKey: '', binId: '' }; }
@@ -2061,9 +2077,12 @@ const App = (() => {
           <div class="settings-card" style="padding:14px 16px;margin-top:8px">
             <div style="font-size:13px;font-weight:700;margin-bottom:8px">已匯入的課程</div>
             ${loadCustomLessons().map(l => `
-              <div style="display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f0f0f0">
-                <div style="font-size:13px">${l.lessonNumber ? `第 ${l.lessonNumber} 堂 · ` : ''}${l.title}</div>
-                <button style="background:none;border:none;color:#e53935;font-size:13px;cursor:pointer" onclick="App.deleteCustomLesson('${l.id}');App.renderSettings()">刪除</button>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid #f0f0f0;gap:8px">
+                <div style="font-size:13px;flex:1">${l.lessonNumber ? `第 ${l.lessonNumber} 堂 · ` : ''}${l.title}${l.listening?.transcript ? ' 🎧' : ''}</div>
+                <div style="display:flex;gap:6px;flex-shrink:0">
+                  <button style="background:none;border:1px solid #ccc;border-radius:6px;padding:3px 8px;font-size:12px;cursor:pointer;color:#555" onclick="App.addTranscriptToLesson('${l.id}')">🎧 逐字稿</button>
+                  <button style="background:none;border:none;color:#e53935;font-size:13px;cursor:pointer" onclick="App.deleteCustomLesson('${l.id}');App.renderSettings()">刪除</button>
+                </div>
               </div>
             `).join('')}
           </div>
@@ -2124,6 +2143,7 @@ const App = (() => {
     manualSync,
     handleImportLesson,
     deleteCustomLesson,
+    addTranscriptToLesson,
     renderSettings,
     showNotifBanner,
     _listenSelect: null,
